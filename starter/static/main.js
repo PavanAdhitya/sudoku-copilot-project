@@ -2,6 +2,75 @@
 const SIZE = 9;
 let puzzle = [];
 let solution = [];
+let timerInterval = null;
+let elapsedSeconds = 0;
+let timerRunning = false;
+
+function formatTime(totalSeconds) {
+  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${seconds}`;
+}
+
+function updateTimerDisplay() {
+  const timer = document.getElementById('timer');
+  if (timer) {
+    timer.textContent = formatTime(elapsedSeconds);
+  }
+}
+
+function startTimer() {
+  elapsedSeconds = 0;
+  updateTimerDisplay();
+  if (timerInterval) {
+    clearInterval(timerInterval);
+  }
+  timerRunning = true;
+  timerInterval = setInterval(() => {
+    if (!timerRunning) {
+      return;
+    }
+    elapsedSeconds += 1;
+    updateTimerDisplay();
+  }, 1000);
+}
+
+function pauseTimer() {
+  timerRunning = false;
+}
+
+function stopTimer() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+  timerRunning = false;
+}
+
+function isBoardSolved(board) {
+  if (!solution || solution.length === 0) {
+    return false;
+  }
+  for (let i = 0; i < SIZE; i += 1) {
+    for (let j = 0; j < SIZE; j += 1) {
+      if (board[i][j] !== solution[i][j]) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function maybeStopTimerOnSuccess(board) {
+  if (isBoardSolved(board)) {
+    stopTimer();
+    const msg = document.getElementById('message');
+    if (msg) {
+      msg.style.color = '#388e3c';
+      msg.innerText = 'Congratulations! You solved it!';
+    }
+  }
+}
 
 function getBoardFromInputs() {
   const boardDiv = document.getElementById('sudoku-board');
@@ -51,6 +120,7 @@ function createBoardElement() {
         const val = e.target.value.replace(/[^1-9]/g, '');
         e.target.value = val;
         updateCellValidation(e.target);
+        maybeStopTimerOnSuccess(getBoardFromInputs());
       });
       rowDiv.appendChild(input);
     }
@@ -88,6 +158,7 @@ async function newGame() {
   const res = await fetch(`/new?difficulty=${difficulty}`);
   const data = await res.json();
   renderPuzzle(data.puzzle, data.solution);
+  startTimer();
   document.getElementById('message').innerText = '';
 }
 
@@ -116,6 +187,7 @@ async function checkSolution() {
     }
   }
   if (incorrect.size === 0) {
+    stopTimer();
     msg.style.color = '#388e3c';
     msg.innerText = 'Congratulations! You solved it!';
   } else {

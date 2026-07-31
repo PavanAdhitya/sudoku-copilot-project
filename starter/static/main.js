@@ -12,6 +12,11 @@ function formatTime(totalSeconds) {
   return `${minutes}:${seconds}`;
 }
 
+function buildCompletionMessage(difficulty, totalSeconds) {
+  const difficultyLabel = difficulty ? difficulty.charAt(0).toUpperCase() + difficulty.slice(1) : 'Medium';
+  return `Congratulations! You solved the ${difficultyLabel} puzzle in ${formatTime(totalSeconds)}.`;
+}
+
 function updateTimerDisplay() {
   const timer = document.getElementById('timer');
   if (timer) {
@@ -67,9 +72,8 @@ function maybeStopTimerOnSuccess(board) {
     const msg = document.getElementById('message');
     if (msg) {
       const difficulty = document.getElementById('difficulty-select')?.value || 'medium';
-      const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
       msg.style.color = '#388e3c';
-      msg.innerText = `Congratulations! You solved the ${difficultyLabel} puzzle in ${formatTime(elapsedSeconds)}.`;
+      msg.innerText = buildCompletionMessage(difficulty, elapsedSeconds);
     }
   }
 }
@@ -200,7 +204,7 @@ async function checkSolution() {
   if (incorrect.size === 0) {
     stopTimer();
     msg.style.color = '#388e3c';
-    msg.innerText = data.message || `Congratulations! You solved the ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} puzzle in ${formatTime(elapsedSeconds)}.`;
+    msg.innerText = data.message || buildCompletionMessage(difficulty, elapsedSeconds);
   } else {
     msg.style.color = '#d32f2f';
     msg.innerText = 'Some cells are incorrect.';

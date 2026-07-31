@@ -30,7 +30,7 @@ def new_game():
 
 @app.route('/check', methods=['POST'])
 def check_solution():
-    data = request.json
+    data = request.json or {}
     board = data.get('board')
     partial = data.get('partial', False)
     solution = CURRENT.get('solution')
@@ -48,6 +48,17 @@ def check_solution():
             else:
                 if board[i][j] != solution[i][j]:
                     incorrect.append([i, j])
+
+    if not partial and not incorrect:
+        elapsed_seconds = data.get('elapsed_seconds', 0)
+        difficulty = data.get('difficulty', 'medium').capitalize()
+        minutes, seconds = divmod(int(elapsed_seconds), 60)
+        formatted_time = f"{minutes:02d}:{seconds:02d}"
+        return jsonify({
+            'incorrect': incorrect,
+            'message': f'Congratulations! You solved the {difficulty} puzzle in {formatted_time}.'
+        })
+
     return jsonify({'incorrect': incorrect})
 
 

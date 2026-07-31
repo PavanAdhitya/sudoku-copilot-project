@@ -66,8 +66,10 @@ function maybeStopTimerOnSuccess(board) {
     stopTimer();
     const msg = document.getElementById('message');
     if (msg) {
+      const difficulty = document.getElementById('difficulty-select')?.value || 'medium';
+      const difficultyLabel = difficulty.charAt(0).toUpperCase() + difficulty.slice(1);
       msg.style.color = '#388e3c';
-      msg.innerText = 'Congratulations! You solved it!';
+      msg.innerText = `Congratulations! You solved the ${difficultyLabel} puzzle in ${formatTime(elapsedSeconds)}.`;
     }
   }
 }
@@ -103,6 +105,12 @@ function updateCellValidation(input) {
   }
 }
 
+function getCellClassName(row, col) {
+  const blockRow = Math.floor(row / 3);
+  const blockCol = Math.floor(col / 3);
+  return (blockRow + blockCol) % 2 === 0 ? 'sudoku-cell block-even' : 'sudoku-cell block-odd';
+}
+
 function createBoardElement() {
   const boardDiv = document.getElementById('sudoku-board');
   boardDiv.innerHTML = '';
@@ -113,7 +121,7 @@ function createBoardElement() {
       const input = document.createElement('input');
       input.type = 'text';
       input.maxLength = 1;
-      input.className = 'sudoku-cell';
+      input.className = getCellClassName(i, j);
       input.dataset.row = i;
       input.dataset.col = j;
       input.addEventListener('input', (e) => {
@@ -139,7 +147,7 @@ function renderPuzzle(puz, sol) {
       const idx = i * SIZE + j;
       const val = puzzle[i][j];
       const inp = inputs[idx];
-      inp.className = 'sudoku-cell';
+      inp.className = getCellClassName(i, j);
       if (val !== 0) {
         inp.value = val;
         inp.disabled = true;
@@ -165,10 +173,11 @@ async function newGame() {
 async function checkSolution() {
   const board = getBoardFromInputs();
   const inputs = document.getElementById('sudoku-board').getElementsByTagName('input');
+  const difficulty = document.getElementById('difficulty-select').value;
   const res = await fetch('/check', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({board, partial: false})
+    body: JSON.stringify({board, partial: false, elapsed_seconds: elapsedSeconds, difficulty})
   });
   const data = await res.json();
   const msg = document.getElementById('message');
@@ -181,15 +190,17 @@ async function checkSolution() {
   for (let idx = 0; idx < inputs.length; idx++) {
     const inp = inputs[idx];
     if (inp.disabled) continue;
-    inp.className = 'sudoku-cell';
+    const row = Number(inp.dataset.row);
+    const col = Number(inp.dataset.col);
+    inp.className = getCellClassName(row, col);
     if (incorrect.has(idx)) {
-      inp.className = 'sudoku-cell incorrect';
+      inp.classList.add('incorrect');
     }
   }
   if (incorrect.size === 0) {
     stopTimer();
     msg.style.color = '#388e3c';
-    msg.innerText = 'Congratulations! You solved it!';
+    msg.innerText = data.message || `Congratulations! You solved the ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} puzzle in ${formatTime(elapsedSeconds)}.`;
   } else {
     msg.style.color = '#d32f2f';
     msg.innerText = 'Some cells are incorrect.';

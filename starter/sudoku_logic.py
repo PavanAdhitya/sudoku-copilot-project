@@ -23,53 +23,103 @@ def count_clues(board):
 
 
 def is_safe(board, row, col, num):
-    # Check row and column
     for x in range(SIZE):
         if board[row][x] == num or board[x][col] == num:
             return False
-    # Check 3x3 box
-    start_row = row - row % 3
-    start_col = col - col % 3
-    for i in range(3):
-        for j in range(3):
-            if board[start_row + i][start_col + j] == num:
+
+    start_row = (row // 3) * 3
+    start_col = (col // 3) * 3
+    for i in range(start_row, start_row + 3):
+        for j in range(start_col, start_col + 3):
+            if board[i][j] == num:
                 return False
     return True
+
+
+def get_candidates(board, row, col):
+    if board[row][col] != EMPTY:
+        return []
+
+    used_values = set()
+    for x in range(SIZE):
+        if board[row][x] != EMPTY:
+            used_values.add(board[row][x])
+        if board[x][col] != EMPTY:
+            used_values.add(board[x][col])
+
+    start_row = (row // 3) * 3
+    start_col = (col // 3) * 3
+    for i in range(start_row, start_row + 3):
+        for j in range(start_col, start_col + 3):
+            if board[i][j] != EMPTY:
+                used_values.add(board[i][j])
+
+    return [value for value in range(1, SIZE + 1) if value not in used_values]
+
 
 def fill_board(board):
-    for row in range(SIZE):
-        for col in range(SIZE):
-            if board[row][col] == EMPTY:
-                possible = list(range(1, SIZE + 1))
-                random.shuffle(possible)
-                for candidate in possible:
-                    if is_safe(board, row, col, candidate):
-                        board[row][col] = candidate
-                        if fill_board(board):
-                            return True
-                        board[row][col] = EMPTY
-                return False
-    return True
+    empty_cell = find_empty_cell(board)
+    if empty_cell is None:
+        return True
+
+    row, col, candidates = empty_cell
+    random.shuffle(candidates)
+    for candidate in candidates:
+        if is_safe(board, row, col, candidate):
+            board[row][col] = candidate
+            if fill_board(board):
+                return True
+            board[row][col] = EMPTY
+    return False
+
 
 def find_empty_cell(board):
+    best_row = best_col = None
+    best_candidates = None
+
     for row in range(SIZE):
         for col in range(SIZE):
-            if board[row][col] == EMPTY:
-                return row, col
-    return None
+            if board[row][col] != EMPTY:
+                continue
+
+            candidates = get_candidates(board, row, col)
+            if not candidates:
+                return row, col, []
+
+            if best_candidates is None or len(candidates) < len(best_candidates):
+                best_row, best_col = row, col
+                best_candidates = candidates
+                if len(best_candidates) == 1:
+                    return best_row, best_col, best_candidates
+
+    if best_row is None:
+        return None
+
+    return best_row, best_col, best_candidates
 
 
 def count_solutions(board, limit=2):
+    """Count solutions up to the provided limit and stop early.
+
+    The solver uses backtracking with constraint checks and a most-constrained-cell
+    choice, which is fast enough for puzzle generation while still confirming
+    that a puzzle has exactly one solution.
+    """
+
     board = deep_copy(board)
 
     empty_cell = find_empty_cell(board)
     if empty_cell is None:
         return 1
 
-    row, col = empty_cell
-    solutions = 0
+    row, col, candidates = empty_cell
+    if not candidates:
+        return 0
 
-    for candidate in random.sample(range(1, SIZE + 1), SIZE):
+    solutions = 0
+    random.shuffle(candidates)
+
+    for candidate in candidates:
         if not is_safe(board, row, col, candidate):
             continue
 

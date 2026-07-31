@@ -250,12 +250,41 @@ async function applyHint() {
   msg.innerText = 'Hint applied.';
 }
 
+const THEME_KEY = 'sudokuTheme';
+
+function applyTheme(theme) {
+  const body = document.body;
+  const toggle = document.getElementById('theme-toggle');
+  const isDark = theme === 'dark';
+  body.classList.toggle('dark-mode', isDark);
+  if (toggle) {
+    toggle.textContent = isDark ? 'Light mode' : 'Dark mode';
+  }
+}
+
+function loadSavedTheme() {
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved === 'light' || saved === 'dark') {
+    return saved;
+  }
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function toggleTheme() {
+  const current = document.body.classList.contains('dark-mode') ? 'dark' : 'light';
+  const next = current === 'dark' ? 'light' : 'dark';
+  applyTheme(next);
+  localStorage.setItem(THEME_KEY, next);
+}
+
 // Wire buttons
 window.addEventListener('load', () => {
   document.getElementById('new-game').addEventListener('click', newGame);
   document.getElementById('check-puzzle').addEventListener('click', checkPuzzle);
   document.getElementById('check-solution').addEventListener('click', checkSolution);
   document.getElementById('hint').addEventListener('click', applyHint);
+  document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   // initialize
+  applyTheme(loadSavedTheme());
   newGame();
 });

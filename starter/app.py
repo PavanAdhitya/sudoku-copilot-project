@@ -26,20 +26,28 @@ def new_game():
 
     CURRENT['puzzle'] = puzzle
     CURRENT['solution'] = solution
-    return jsonify({'puzzle': puzzle})
+    return jsonify({'puzzle': puzzle, 'solution': solution})
 
 @app.route('/check', methods=['POST'])
 def check_solution():
     data = request.json
     board = data.get('board')
+    partial = data.get('partial', False)
     solution = CURRENT.get('solution')
     if solution is None:
         return jsonify({'error': 'No game in progress'}), 400
     incorrect = []
     for i in range(sudoku_logic.SIZE):
         for j in range(sudoku_logic.SIZE):
-            if board[i][j] != solution[i][j]:
-                incorrect.append([i, j])
+            # If partial checking is requested, only validate cells
+            # that the player has filled (non-zero). For full checks,
+            # compare every cell against the solution.
+            if partial:
+                if board[i][j] != 0 and board[i][j] != solution[i][j]:
+                    incorrect.append([i, j])
+            else:
+                if board[i][j] != solution[i][j]:
+                    incorrect.append([i, j])
     return jsonify({'incorrect': incorrect})
 
 if __name__ == '__main__':

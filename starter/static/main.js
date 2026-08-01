@@ -5,6 +5,7 @@ let solution = [];
 let timerInterval = null;
 let elapsedSeconds = 0;
 let timerRunning = false;
+let hintsUsed = 0;
 
 function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
@@ -39,7 +40,7 @@ function saveLeaderboard(entries) {
 
 function addLeaderboardEntry(name, timeSeconds, difficulty) {
   const entries = loadLeaderboard();
-  const entry = {name: name || 'Anonymous', time_seconds: timeSeconds, difficulty: difficulty || 'medium', created_at: Date.now()};
+  const entry = {name: name || 'Anonymous', time_seconds: timeSeconds, difficulty: difficulty || 'medium', hints: hintsUsed ,created_at: Date.now()};
   entries.push(entry);
   entries.sort((a, b) => a.time_seconds - b.time_seconds);
   const top = entries.slice(0, 10);
@@ -65,12 +66,19 @@ function renderLeaderboard() {
       <td>${escapeHtml(e.name)}</td>
       <td>${formatTime(e.time_seconds)}</td>
       <td>${escapeHtml(formatDifficultyLabel(e.difficulty))}</td>
+      <td>${e.hints ?? 0}</td>
     </tr>
   `).join('');
   container.innerHTML = `
     <table class="leaderboard-table">
       <thead>
-        <tr><th>Rank</th><th>Player</th><th>Time</th><th>Difficulty</th></tr>
+      <tr>
+        <th>Rank</th>
+        <th>Player</th>
+        <th>Time</th>
+        <th>Difficulty</th>
+        <th>Hints</th>
+      </tr>
       </thead>
       <tbody>
         ${rows}
@@ -236,6 +244,7 @@ async function newGame() {
   const data = await res.json();
   renderPuzzle(data.puzzle, data.solution);
   _puzzleSolvedHandled = false;
+  hintsUsed = 0;
   startTimer();
   document.getElementById('message').innerText = '';
   // refresh leaderboard display (in case user cleared storage elsewhere)
@@ -328,6 +337,7 @@ async function applyHint() {
     return;
   }
   renderPuzzle(data.puzzle, solution);
+  hintsUsed++;
   msg.style.color = '#388e3c';
   msg.innerText = 'Hint applied.';
 }

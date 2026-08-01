@@ -17,6 +17,75 @@ function buildCompletionMessage(difficulty, totalSeconds) {
   return `Congratulations! You solved the ${difficultyLabel} puzzle in ${formatTime(totalSeconds)}.`;
 }
 
+// Leaderboard keys and helpers
+const LEADERBOARD_KEY = 'sudokuLeaderboard';
+let _puzzleSolvedHandled = false;
+
+function loadLeaderboard() {
+  try {
+    const raw = localStorage.getItem(LEADERBOARD_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed;
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLeaderboard(entries) {
+  localStorage.setItem(LEADERBOARD_KEY, JSON.stringify(entries));
+}
+
+function addLeaderboardEntry(name, timeSeconds, difficulty) {
+  const entries = loadLeaderboard();
+  const entry = {name: name || 'Anonymous', time_seconds: timeSeconds, difficulty: difficulty || 'medium', created_at: Date.now()};
+  entries.push(entry);
+  entries.sort((a, b) => a.time_seconds - b.time_seconds);
+  const top = entries.slice(0, 10);
+  saveLeaderboard(top);
+}
+
+function formatDifficultyLabel(d) {
+  if (!d) return 'Medium';
+  return d.charAt(0).toUpperCase() + d.slice(1);
+}
+
+function renderLeaderboard() {
+  const container = document.getElementById('leaderboard');
+  if (!container) return;
+  const entries = loadLeaderboard();
+  if (!entries || entries.length === 0) {
+    container.innerHTML = '<div class="leaderboard-empty">No entries yet. Solve a puzzle to appear here.</div>';
+    return;
+  }
+  const rows = entries.map((e, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${escapeHtml(e.name)}</td>
+      <td>${formatTime(e.time_seconds)}</td>
+      <td>${escapeHtml(formatDifficultyLabel(e.difficulty))}</td>
+    </tr>
+  `).join('');
+  container.innerHTML = `
+    <table class="leaderboard-table">
+      <thead>
+        <tr><th>Rank</th><th>Player</th><th>Time</th><th>Difficulty</th></tr>
+      </thead>
+      <tbody>
+        ${rows}
+      </tbody>
+    </table>
+  `;
+}
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/[&<>\"']/g, function (s) {
+    return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[s];
+  });
+}
+
 function updateTimerDisplay() {
   const timer = document.getElementById('timer');
   if (timer) {
@@ -69,12 +138,8 @@ function isBoardSolved(board) {
 function maybeStopTimerOnSuccess(board) {
   if (isBoardSolved(board)) {
     stopTimer();
-    const msg = document.getElementById('message');
-    if (msg) {
-      const difficulty = document.getElementById('difficulty-select')?.value || 'medium';
-      msg.style.color = '#388e3c';
-      msg.innerText = buildCompletionMessage(difficulty, elapsedSeconds);
-    }
+    const difficulty = document.getElementById('difficulty-select')?.value || 'medium';
+    handlePuzzleSolved(difficulty, elapsedSeconds);
   }
 }
 
@@ -170,8 +235,11 @@ async function newGame() {
   const res = await fetch(`/new?difficulty=${difficulty}`);
   const data = await res.json();
   renderPuzzle(data.puzzle, data.solution);
+  _puzzleSolvedHandled = false;
   startTimer();
   document.getElementById('message').innerText = '';
+  // refresh leaderboard display (in case user cleared storage elsewhere)
+  renderLeaderboard();
 }
 
 async function checkSolution() {
@@ -203,8 +271,7 @@ async function checkSolution() {
   }
   if (incorrect.size === 0) {
     stopTimer();
-    msg.style.color = '#388e3c';
-    msg.innerText = data.message || buildCompletionMessage(difficulty, elapsedSeconds);
+    handlePuzzleSolved(difficulty, elapsedSeconds);
   } else {
     msg.style.color = '#d32f2f';
     msg.innerText = 'Some cells are incorrect.';
@@ -292,6 +359,33 @@ function toggleTheme() {
   localStorage.setItem(THEME_KEY, next);
 }
 
+// Called when a puzzle is solved to capture name and save leaderboard entry
+function handlePuzzleSolved(difficulty, totalSeconds) {
+  if (_puzzleSolvedHandled) return;
+  _puzzleSolvedHandled = true;
+  const msg = document.getElementById('message');
+  if (msg) {
+    msg.style.color = '#388e3c';
+    msg.innerText = buildCompletionMessage(difficulty, totalSeconds);
+  }
+  // Ask for player name
+  try {
+    const promptMsg = `You solved the puzzle in ${formatTime(totalSeconds)}. Enter your name for the leaderboard:`;
+    const name = window.prompt(promptMsg, '');
+    if (name === null) {
+      // user cancelled - do not save but still show leaderboard
+      renderLeaderboard();
+      return;
+    }
+    const cleaned = name.trim() || 'Anonymous';
+    addLeaderboardEntry(cleaned, totalSeconds, difficulty);
+    renderLeaderboard();
+  } catch (e) {
+    // ignore prompt errors
+    renderLeaderboard();
+  }
+}
+
 // Wire buttons
 window.addEventListener('load', () => {
   document.getElementById('new-game').addEventListener('click', newGame);
@@ -301,5 +395,6 @@ window.addEventListener('load', () => {
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
   // initialize
   applyTheme(loadSavedTheme());
+  renderLeaderboard();
   newGame();
 });

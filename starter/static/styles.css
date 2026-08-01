@@ -246,3 +246,40 @@ button:hover {
         margin-left: 0;
     }
 }
+
+.leaderboard-section {
+    width: min(100%, 720px);
+    margin-top: 0.6rem;
+    padding: 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-strong);
+    text-align: left;
+}
+
+.leaderboard-section h2 {
+    margin: 0 0 0.6rem 0;
+    font-size: 1.05rem;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    padding: 0.45rem 0.6rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.leaderboard-table th {
+    text-align: left;
+    font-weight: 700;
+}
+
+.leaderboard-empty {
+    padding: 0.6rem 0.3rem;
+    color: var(--muted-text);
+}

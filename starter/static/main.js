@@ -40,7 +40,7 @@ function saveLeaderboard(entries) {
 
 function addLeaderboardEntry(name, timeSeconds, difficulty) {
   const entries = loadLeaderboard();
-  const entry = {name: name || 'Anonymous', time_seconds: timeSeconds, difficulty: difficulty || 'medium', hints: hintsUsed ,created_at: Date.now()};
+  const entry = {name: name || 'Anonymous', time_seconds: timeSeconds, difficulty: difficulty || 'medium', hints: hintsUsed , created_at: Date.now()};
   entries.push(entry);
   entries.sort((a, b) => a.time_seconds - b.time_seconds);
   const top = entries.slice(0, 10);
